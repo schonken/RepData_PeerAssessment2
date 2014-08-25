@@ -1,10 +1,5 @@
----
-title: "Exploring Health and Economic impact of severe weather events"
-output:
-  html_document:
-    keep_md: yes
-date: "24 August 2014"
----
+# Exploring Health and Economic impact of severe weather events
+24 August 2014  
 
 ### Synopsis
 Using the U.S.A. National Oceanic and Atmospheric Administration's (NOAA) [Storm Data](https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2) spanning 1950 through November 2011 this report endeavours to address the following two questions:
@@ -29,7 +24,8 @@ Field | Definition
 
 ### Data Processing
 Start by initializing a few R libraries. Turn echo on for R code chunks, center figures and suppress messages.
-```{r, echo=TRUE, message=FALSE, cache=FALSE}
+
+```r
 require(gdata)
 require(lattice)
 require(knitr)
@@ -40,7 +36,8 @@ opts_chunk$set(echo=TRUE, fig.align='center', message=FALSE, cache=TRUE)
 ```
 
 Check to see if we've already downloaded the file, if not, download it now. 
-```{r, cache=TRUE}
+
+```r
 filename <- 'data/StormData.csv.bz2'
 dir.create(file.path(getwd(), 'data'), showWarnings = FALSE)
 if (!file.exists(filename))
@@ -53,7 +50,8 @@ if (!file.exists(filename))
 ```
 
 Create a function to calculate damage using the Damage Magnitude (H = hunderds, K = thousands, M = millions, B = billions) scale.
-```{r}
+
+```r
 CalculateDamage <- function(dmg, exp){
   if (exp == 'H') { dmg * 10^2 }  
   else if (exp == 'K') { dmg * 10^3 }
@@ -64,7 +62,8 @@ CalculateDamage <- function(dmg, exp){
 ```
 
 Read data from `StormData.csv.bz2` into `dataRaw` and then proceed to ready `data` by converting columns to the right data types and lastly calculate `DMG` (damage total) using `CalculateDamage()`.
-```{r}
+
+```r
 if (!exists("dataRaw")){
   dataRaw <- read.csv(bzfile(filename))
   
@@ -88,7 +87,8 @@ if (!exists("dataRaw")){
 
 The `EVTYPE` (Event Types) seems to have been populated by hand and as a result suffers from a great deal of finger trouble, spelling mistakes and inconsistent logging. Create two functions to clean up `EVTYPE` (Event Types).
 
-```{r}
+
+```r
 EventTypeCleanupStartsWith <- function(eventType){
   if (startsWith(eventType, "THUNDERSTORM WIND")){
     if (eventType != "THUNDERSTORM WIND FLOOD" |
@@ -189,7 +189,8 @@ EventTypeCleanup <- function(data) {
 
 
 Create a data frame `dataHltSum` as a summary related to health (fatalities and injuries). Use the `EventTypeCleanup()` function to clean up `EVTYPE` and then aggregate again. Ranking the `EVTYPE` from a health perspective is tricky because just adding `FATALITIES` and `INJURIES` together does not make sense from a social perspective. It is clear that a fatality is more severe than an injury. But how much? For the purposes of this report we assume 10 times.
-```{r}
+
+```r
 dataHlt <- data[data$FATALITIES > 0 | data$INJURIES > 0, c('EVTYPE', 'FATALITIES', 'INJURIES')]
 dataHltSum <- ddply(dataHlt, .(EVTYPE), colwise(sum))
 dataHltSum <- EventTypeCleanup(dataHltSum)
@@ -204,7 +205,8 @@ dataHltSum <- dataHltSum[1:20,]
 ```
 
 Create a data frame `dataDmgSum` as a summary related to property damage. Use the `EventTypeCleanup()` function to clean up `EVTYPE` and then aggregate again. Order by DMG (damage) descending and select the 20 most servere weather events.
-```{r}
+
+```r
 dataDmg <- data[data$DMG > 0 , c('EVTYPE','DMG')]
 dataDmgSum <- ddply(dataDmg, .(EVTYPE), colwise(sum))
 dataDmgSum <- EventTypeCleanup(dataDmgSum)
@@ -218,7 +220,8 @@ dataDmgSum$DMG <- dataDmgSum$DMG / 10^9
 ### Results
 #### Which types of events are most harmful with respect to population health?
 Print the 20 most severe Event Types from a Public Health perspective using `xtable()`. Order the list descending by `TOTAL_ADJUSTED` which is calculated as `FATALITIES` + (`INJURIES`/10) in an effort to convey a weighed public health harm attributed to the respective event types. 
-```{r, results="asis"}
+
+```r
 dataHltSum$FATALITIES <- format(dataHltSum$FATALITIES, big.mark=',')
 dataHltSum$INJURIES <- format(dataHltSum$INJURIES, big.mark=',')
 dataHltSum$TOTAL <- format(dataHltSum$TOTAL, big.mark=',')
@@ -228,11 +231,38 @@ colnames(dataHltSum) <- c(
   'Fatalities + Injuries', 'Fatalities + Injuries (Weighted)')
 print(xtable(dataHltSum), type='HTML', html.table.attributes="align='center', border='1px'", include.rownames=FALSE)
 ```
+
+<!-- html table generated in R 3.0.2 by xtable 1.7-3 package -->
+<!-- Tue Aug 26 09:14:12 2014 -->
+<TABLE align='center', border='1px'>
+<TR> <TH> Event Type </TH> <TH> Fatalities </TH> <TH> Injuries </TH> <TH> Fatalities + Injuries </TH> <TH> Fatalities + Injuries (Weighted) </TH>  </TR>
+  <TR> <TD> TORNADO </TD> <TD> 5,633 </TD> <TD> 91,346 </TD> <TD> 96,979 </TD> <TD> 14,767.6 </TD> </TR>
+  <TR> <TD> EXCESSIVE HEAT </TD> <TD> 1,903 </TD> <TD>  6,525 </TD> <TD>  8,428 </TD> <TD>  2,555.5 </TD> </TR>
+  <TR> <TD> THUNDERSTORM WIND </TD> <TD>   710 </TD> <TD>  9,496 </TD> <TD> 10,206 </TD> <TD>  1,659.6 </TD> </TR>
+  <TR> <TD> LIGHTNING </TD> <TD>   816 </TD> <TD>  5,230 </TD> <TD>  6,046 </TD> <TD>  1,339.0 </TD> </TR>
+  <TR> <TD> FLASH FLOOD </TD> <TD>   999 </TD> <TD>  1,785 </TD> <TD>  2,784 </TD> <TD>  1,177.5 </TD> </TR>
+  <TR> <TD> FLOOD </TD> <TD>   476 </TD> <TD>  6,791 </TD> <TD>  7,267 </TD> <TD>  1,155.1 </TD> </TR>
+  <TR> <TD> HEAT </TD> <TD>   937 </TD> <TD>  2,100 </TD> <TD>  3,037 </TD> <TD>  1,147.0 </TD> </TR>
+  <TR> <TD> HIGH WIND </TD> <TD>   283 </TD> <TD>  1,440 </TD> <TD>  1,723 </TD> <TD>    427.0 </TD> </TR>
+  <TR> <TD> RIP CURRENT </TD> <TD>   368 </TD> <TD>    232 </TD> <TD>    600 </TD> <TD>    391.2 </TD> </TR>
+  <TR> <TD> WINTER STORM </TD> <TD>   216 </TD> <TD>  1,338 </TD> <TD>  1,554 </TD> <TD>    349.8 </TD> </TR>
+  <TR> <TD> ICE STORM </TD> <TD>    89 </TD> <TD>  1,975 </TD> <TD>  2,064 </TD> <TD>    286.5 </TD> </TR>
+  <TR> <TD> AVALANCHE </TD> <TD>   224 </TD> <TD>    170 </TD> <TD>    394 </TD> <TD>    241.0 </TD> </TR>
+  <TR> <TD> RIP CURRENTS </TD> <TD>   204 </TD> <TD>    297 </TD> <TD>    501 </TD> <TD>    233.7 </TD> </TR>
+  <TR> <TD> HEAVY SNOW </TD> <TD>   127 </TD> <TD>  1,021 </TD> <TD>  1,148 </TD> <TD>    229.1 </TD> </TR>
+  <TR> <TD> HEAT WAVE </TD> <TD>   172 </TD> <TD>    379 </TD> <TD>    551 </TD> <TD>    209.9 </TD> </TR>
+  <TR> <TD> HURRICANE TYPHOON </TD> <TD>    64 </TD> <TD>  1,275 </TD> <TD>  1,339 </TD> <TD>    191.5 </TD> </TR>
+  <TR> <TD> EXTREME COLD </TD> <TD>   162 </TD> <TD>    231 </TD> <TD>    393 </TD> <TD>    185.1 </TD> </TR>
+  <TR> <TD> WILD FIRE </TD> <TD>    78 </TD> <TD>  1,061 </TD> <TD>  1,139 </TD> <TD>    184.1 </TD> </TR>
+  <TR> <TD> BLIZZARD </TD> <TD>   101 </TD> <TD>    805 </TD> <TD>    906 </TD> <TD>    181.5 </TD> </TR>
+  <TR> <TD> HAIL </TD> <TD>    15 </TD> <TD>  1,361 </TD> <TD>  1,376 </TD> <TD>    151.1 </TD> </TR>
+   </TABLE>
 </br>
 
 #### Which types of events have the greatest economic consequences?
 Create a bar chart showing the 20 most severe Event Types from a Property Damage perspective.
-```{r DamageBarChart}
+
+```r
 dataDmgSum$EVTYPE <- reorder(dataDmgSum$EVTYPE, -dataDmgSum$DMG) 
 print(barchart(EVTYPE ~ DMG, 
                data=dataDmgSum[1:15,], 
@@ -242,11 +272,40 @@ print(barchart(EVTYPE ~ DMG,
                ))
 ```
 
+<img src="./Report_files/figure-html/DamageBarChart.png" title="plot of chunk DamageBarChart" alt="plot of chunk DamageBarChart" style="display: block; margin: auto;" />
+
 Print the 20 most severe Event Types from a Property Damage perspective using `xtable()`. DMG (damage) is shown in Billion (10^9) USD
-```{r, results="asis"}
+
+```r
 dataDmgSum$DMG <- format(dataDmgSum$DMG, big.mark=',')
 colnames(dataDmgSum) <- c('Event Type', 'Damage in USD Billion (10^9)')
 
 print(xtable(dataDmgSum), type='HTML', html.table.attributes="align='center', border='1px'", include.rownames=FALSE)
 ```
+
+<!-- html table generated in R 3.0.2 by xtable 1.7-3 package -->
+<!-- Tue Aug 26 09:16:57 2014 -->
+<TABLE align='center', border='1px'>
+<TR> <TH> Event Type </TH> <TH> Damage in USD Billion (10^9) </TH>  </TR>
+  <TR> <TD> FLOOD </TD> <TD> 150.443 </TD> </TR>
+  <TR> <TD> HURRICANE TYPHOON </TD> <TD>  71.914 </TD> </TR>
+  <TR> <TD> TORNADO </TD> <TD>  57.352 </TD> </TR>
+  <TR> <TD> STORM SURGE </TD> <TD>  43.324 </TD> </TR>
+  <TR> <TD> HAIL </TD> <TD>  18.758 </TD> </TR>
+  <TR> <TD> FLASH FLOOD </TD> <TD>  17.894 </TD> </TR>
+  <TR> <TD> DROUGHT </TD> <TD>  15.019 </TD> </TR>
+  <TR> <TD> HURRICANE </TD> <TD>  14.610 </TD> </TR>
+  <TR> <TD> THUNDERSTORM WIND </TD> <TD>  10.986 </TD> </TR>
+  <TR> <TD> RIVER FLOOD </TD> <TD>  10.293 </TD> </TR>
+  <TR> <TD> ICE STORM </TD> <TD>   8.967 </TD> </TR>
+  <TR> <TD> TROPICAL STORM </TD> <TD>   8.409 </TD> </TR>
+  <TR> <TD> WINTER STORM </TD> <TD>   6.716 </TD> </TR>
+  <TR> <TD> HIGH WIND </TD> <TD>   6.559 </TD> </TR>
+  <TR> <TD> WILD FIRE </TD> <TD>   5.786 </TD> </TR>
+  <TR> <TD> STORM SURGE TIDE </TD> <TD>   4.642 </TD> </TR>
+  <TR> <TD> HURRICANE OPAL </TD> <TD>   3.192 </TD> </TR>
+  <TR> <TD> WILD FOREST FIRE </TD> <TD>   3.109 </TD> </TR>
+  <TR> <TD> HEAVY RAIN SEVERE WEATHER </TD> <TD>   2.500 </TD> </TR>
+  <TR> <TD> TORNADO THUNDERSTORM WIND HAIL </TD> <TD>   1.603 </TD> </TR>
+   </TABLE>
 </br>

@@ -27,6 +27,7 @@ Start by initializing a few R libraries. Turn echo on for R code chunks, center 
 
 ```r
 require(gdata)
+require(ggplot2)
 require(lattice)
 require(knitr)
 require(plyr)
@@ -67,7 +68,8 @@ Read data from `StormData.csv.bz2` into `dataRaw` and then proceed to ready `dat
 if (!exists("dataRaw")){
   dataRaw <- read.csv(bzfile(filename))
   
-  data <- dataRaw[ ,c('EVTYPE', 'FATALITIES', 'INJURIES', 'PROPDMG', 'PROPDMGEXP', 'CROPDMG', 'CROPDMGEXP')]
+  data <- dataRaw[ ,c('EVTYPE', 'FATALITIES', 'INJURIES', 'PROPDMG', 
+                      'PROPDMGEXP', 'CROPDMG', 'CROPDMGEXP')]
   data$EVTYPE <- toupper(data$EVTYPE)
   data$FATALITIES > as.numeric(as.character(data$FATALITIES))
   data$INJURIES > as.numeric(as.character(data$INJURIES))
@@ -226,14 +228,18 @@ dataHltSum$FATALITIES <- format(dataHltSum$FATALITIES, big.mark=',')
 dataHltSum$INJURIES <- format(dataHltSum$INJURIES, big.mark=',')
 dataHltSum$TOTAL <- format(dataHltSum$TOTAL, big.mark=',')
 dataHltSum$TOTAL_ADJUSTED <- format(dataHltSum$TOTAL_ADJUSTED, big.mark=',')
+
 colnames(dataHltSum) <- c(
   'Event Type', 'Fatalities', 'Injuries', 
   'Fatalities + Injuries', 'Fatalities + Injuries (Weighted)')
-print(xtable(dataHltSum), type='HTML', html.table.attributes="align='center', border='1px'", include.rownames=FALSE)
+
+print(xtable(dataHltSum), type='HTML', 
+      html.table.attributes="align='center', border='1px'", 
+      include.rownames=FALSE)
 ```
 
 <!-- html table generated in R 3.0.2 by xtable 1.7-3 package -->
-<!-- Tue Aug 26 09:14:12 2014 -->
+<!-- Tue Aug 26 10:29:51 2014 -->
 <TABLE align='center', border='1px'>
 <TR> <TH> Event Type </TH> <TH> Fatalities </TH> <TH> Injuries </TH> <TH> Fatalities + Injuries </TH> <TH> Fatalities + Injuries (Weighted) </TH>  </TR>
   <TR> <TD> TORNADO </TD> <TD> 5,633 </TD> <TD> 91,346 </TD> <TD> 96,979 </TD> <TD> 14,767.6 </TD> </TR>
@@ -263,30 +269,33 @@ print(xtable(dataHltSum), type='HTML', html.table.attributes="align='center', bo
 Create a bar chart showing the 20 most severe Event Types from a Property Damage perspective.
 
 ```r
-dataDmgSum$EVTYPE <- reorder(dataDmgSum$EVTYPE, -dataDmgSum$DMG) 
-print(barchart(EVTYPE ~ DMG, 
-               data=dataDmgSum[1:15,], 
-               xlim=c(0,155),
-               xlab="Damage caused in USD Billion (10^9) between 1950 and November 2011",
-               main="Top 15 Severe Event Types from a Property Damage perspective"
-               ))
+dataDmgSum$EVTYPE <- reorder(dataDmgSum$EVTYPE, dataDmgSum$DMG) 
+
+ggplot(dataDmgSum[1:15,], aes(y = DMG, x = EVTYPE)) +
+  ggtitle("Top 15 Severe Event Types ranked by Property Damage") + 
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  xlab('') +
+  ylab('Accumulated Damage (USD Billion)')
 ```
 
 <img src="./Report_files/figure-html/DamageBarChart.png" title="plot of chunk DamageBarChart" alt="plot of chunk DamageBarChart" style="display: block; margin: auto;" />
 
-Print the 20 most severe Event Types from a Property Damage perspective using `xtable()`. DMG (damage) is shown in Billion (10^9) USD
+Print the 20 most severe Event Types from a Property Damage perspective using `xtable()`.
 
 ```r
 dataDmgSum$DMG <- format(dataDmgSum$DMG, big.mark=',')
-colnames(dataDmgSum) <- c('Event Type', 'Damage in USD Billion (10^9)')
+colnames(dataDmgSum) <- c('Event Type', 'Accumulated Damage (USD Billion)')
 
-print(xtable(dataDmgSum), type='HTML', html.table.attributes="align='center', border='1px'", include.rownames=FALSE)
+print(xtable(dataDmgSum), type='HTML', 
+      html.table.attributes="align='center', border='1px'", 
+      include.rownames=FALSE)
 ```
 
 <!-- html table generated in R 3.0.2 by xtable 1.7-3 package -->
-<!-- Tue Aug 26 09:16:57 2014 -->
+<!-- Tue Aug 26 10:35:23 2014 -->
 <TABLE align='center', border='1px'>
-<TR> <TH> Event Type </TH> <TH> Damage in USD Billion (10^9) </TH>  </TR>
+<TR> <TH> Event Type </TH> <TH> Accumulated Damage (USD Billion) </TH>  </TR>
   <TR> <TD> FLOOD </TD> <TD> 150.443 </TD> </TR>
   <TR> <TD> HURRICANE TYPHOON </TD> <TD>  71.914 </TD> </TR>
   <TR> <TD> TORNADO </TD> <TD>  57.352 </TD> </TR>

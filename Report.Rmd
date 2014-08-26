@@ -31,6 +31,7 @@ Field | Definition
 Start by initializing a few R libraries. Turn echo on for R code chunks, center figures and suppress messages.
 ```{r, echo=TRUE, message=FALSE, cache=FALSE}
 require(gdata)
+require(ggplot2)
 require(lattice)
 require(knitr)
 require(plyr)
@@ -68,7 +69,8 @@ Read data from `StormData.csv.bz2` into `dataRaw` and then proceed to ready `dat
 if (!exists("dataRaw")){
   dataRaw <- read.csv(bzfile(filename))
   
-  data <- dataRaw[ ,c('EVTYPE', 'FATALITIES', 'INJURIES', 'PROPDMG', 'PROPDMGEXP', 'CROPDMG', 'CROPDMGEXP')]
+  data <- dataRaw[ ,c('EVTYPE', 'FATALITIES', 'INJURIES', 'PROPDMG', 
+                      'PROPDMGEXP', 'CROPDMG', 'CROPDMGEXP')]
   data$EVTYPE <- toupper(data$EVTYPE)
   data$FATALITIES > as.numeric(as.character(data$FATALITIES))
   data$INJURIES > as.numeric(as.character(data$INJURIES))
@@ -223,30 +225,37 @@ dataHltSum$FATALITIES <- format(dataHltSum$FATALITIES, big.mark=',')
 dataHltSum$INJURIES <- format(dataHltSum$INJURIES, big.mark=',')
 dataHltSum$TOTAL <- format(dataHltSum$TOTAL, big.mark=',')
 dataHltSum$TOTAL_ADJUSTED <- format(dataHltSum$TOTAL_ADJUSTED, big.mark=',')
+
 colnames(dataHltSum) <- c(
   'Event Type', 'Fatalities', 'Injuries', 
   'Fatalities + Injuries', 'Fatalities + Injuries (Weighted)')
-print(xtable(dataHltSum), type='HTML', html.table.attributes="align='center', border='1px'", include.rownames=FALSE)
+
+print(xtable(dataHltSum), type='HTML', 
+      html.table.attributes="align='center', border='1px'", 
+      include.rownames=FALSE)
 ```
 </br>
 
 #### Which types of events have the greatest economic consequences?
 Create a bar chart showing the 20 most severe Event Types from a Property Damage perspective.
-```{r DamageBarChart}
-dataDmgSum$EVTYPE <- reorder(dataDmgSum$EVTYPE, -dataDmgSum$DMG) 
-print(barchart(EVTYPE ~ DMG, 
-               data=dataDmgSum[1:15,], 
-               xlim=c(0,155),
-               xlab="Damage caused in USD Billion (10^9) between 1950 and November 2011",
-               main="Top 15 Severe Event Types from a Property Damage perspective"
-               ))
+```{r DamageBarChart, fig.width=8}
+dataDmgSum$EVTYPE <- reorder(dataDmgSum$EVTYPE, dataDmgSum$DMG) 
+
+ggplot(dataDmgSum[1:15,], aes(y = DMG, x = EVTYPE)) +
+  ggtitle("Top 15 Severe Event Types ranked by Property Damage") + 
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  xlab('') +
+  ylab('Accumulated Damage (USD Billion)')
 ```
 
-Print the 20 most severe Event Types from a Property Damage perspective using `xtable()`. DMG (damage) is shown in Billion (10^9) USD
+Print the 20 most severe Event Types from a Property Damage perspective using `xtable()`.
 ```{r, results="asis"}
 dataDmgSum$DMG <- format(dataDmgSum$DMG, big.mark=',')
-colnames(dataDmgSum) <- c('Event Type', 'Damage in USD Billion (10^9)')
+colnames(dataDmgSum) <- c('Event Type', 'Accumulated Damage (USD Billion)')
 
-print(xtable(dataDmgSum), type='HTML', html.table.attributes="align='center', border='1px'", include.rownames=FALSE)
+print(xtable(dataDmgSum), type='HTML', 
+      html.table.attributes="align='center', border='1px'", 
+      include.rownames=FALSE)
 ```
 </br>
